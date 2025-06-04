@@ -1,10 +1,10 @@
 // components/MetroDashboard.js
 "use client";
 
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
-import { MapPin, Clock, TrainFront } from "lucide-react";
+import { MapPin, Clock, TrainFront , CircleDollarSign} from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import SideDrawer from "./SideDrawer";
@@ -33,9 +33,26 @@ export default function MetroDashboard() {
   const [showTrains, setShowTrains] = useState(false);
   const [stationQuery, setStationQuery] = useState("");
   const [trainQuery, setTrainQuery] = useState("");
+  const [trainList, setTrainList] = useState([]);
 
   const selectedSource = stations.find((s) => s.name === source);
   const selectedDestination = stations.find((s) => s.name === destination);
+
+
+useEffect(() => {
+  if (source && destination && source !== destination) {
+    fetch(`/api/metro?source=${encodeURIComponent(source)}&destination=${encodeURIComponent(destination)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) {
+          setTrainList(data.trains);
+        } else {
+          console.error(data.error);
+          setTrainList([]);
+        }
+      });
+  }
+}, [source, destination]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -58,14 +75,14 @@ export default function MetroDashboard() {
           onChange={(e) => setStationQuery(e.target.value)}
         />
         <ul className="space-y-2">
-          {stations
-            .filter((s) => s.name.toLowerCase().includes(stationQuery.toLowerCase()))
-            .map((station) => (
-              <li key={station.name} className="text-blue-700 hover:underline">
-                <Link href={`/stations?name=${encodeURIComponent(station.name)}`}>{station.name}</Link>
-              </li>
-            ))}
-        </ul>
+        {stations
+          .filter((s) => s.name.toLowerCase().includes(stationQuery.toLowerCase()))
+          .map((station) => (
+            <li key={station.name} className="text-blue-700 hover:underline">
+              <Link href={`/stations/${encodeURIComponent(station.name)}`}>{station.name}</Link>
+            </li>
+          ))}
+      </ul>
       </SideDrawer>
 
       {/* Side Drawer: All Trains */}
@@ -78,14 +95,14 @@ export default function MetroDashboard() {
           onChange={(e) => setTrainQuery(e.target.value)}
         />
         <ul className="space-y-2">
-          {trains
-            .filter((t) => t.name.toLowerCase().includes(trainQuery.toLowerCase()))
-            .map((train) => (
-              <li key={train.id} className="text-green-700 hover:underline">
-                <Link href={`/trains?id=${train.id}`}>{train.name}</Link>
-              </li>
-            ))}
-        </ul>
+        {trains
+          .filter((t) => t.name.toLowerCase().includes(trainQuery.toLowerCase()))
+          .map((train) => (
+            <li key={train.id} className="text-green-700 hover:underline">
+              <Link href={`/trains/${train.id}`}>{train.name}</Link>
+            </li>
+          ))}
+      </ul>
       </SideDrawer>
 
       {/* Main Dashboard */}
@@ -118,40 +135,47 @@ export default function MetroDashboard() {
           </Select>
         </div>
 
-        {source && destination && source !== destination && (
+       {source && destination && source !== destination && trainList.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="grid gap-6 mt-4"
-          >
-            <Card className="shadow-xl">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <TrainFront className="text-blue-600" />
-                  <p className="text-lg font-medium">
-                    Fare: <span className="text-gray-700">{dummyData.fare}</span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Clock className="text-green-600" />
-                  <p className="text-lg font-medium">
-                    Train Arrival: <span className="text-gray-700">{dummyData.arrivalTime}</span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Clock className="text-purple-600" />
-                  <p className="text-lg font-medium">
-                    Reach Time: <span className="text-gray-700">{dummyData.reachTime}</span>
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+            >
+            {trainList.map(train => (
+              <Card key={train.id} className="shadow-xl">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <TrainFront className="text-blue-600" />
+                    <p className="text-lg font-medium">
+                      Train: <span className="text-gray-700">{train.name}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Clock className="text-green-600" />
+                    <p className="text-lg font-medium">
+                      Departure: <span className="text-gray-700">{train.departureTime}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Clock className="text-purple-600" />
+                    <p className="text-lg font-medium">
+                      Arrival: <span className="text-gray-700">{train.arrivalTime}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                   <CircleDollarSign  className="text-red-600" />
+                    <p className="text-lg font-medium"> 
+                      Fare: <span className="text-gray-700">{train.fare}</span>
+                    </p>
+                  </div>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   <div className="p-3 border rounded-xl bg-gray-50">
                     <h4 className="font-semibold text-blue-700 flex items-center gap-2">
                       <MapPin /> Entry Gates at {source}
                     </h4>
                     <ul className="list-disc list-inside text-gray-700">
-                      {selectedSource?.gates.map((gate) => (
+                      {train.entryGatesSource.map((gate) => (
                         <li key={gate}>{gate}</li>
                       ))}
                     </ul>
@@ -161,16 +185,19 @@ export default function MetroDashboard() {
                       <MapPin /> Entry Gates at {destination}
                     </h4>
                     <ul className="list-disc list-inside text-gray-700">
-                      {selectedDestination?.gates.map((gate) => (
+                      {train.entryGatesDestination.map((gate) => (
                         <li key={gate}>{gate}</li>
                       ))}
                     </ul>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+          
+                </CardContent>
+              </Card>
+            ))}
           </motion.div>
         )}
+
       </div>
     </div>
   );
