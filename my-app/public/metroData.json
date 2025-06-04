@@ -1,0 +1,41 @@
+{
+  "stations": [
+    { "name": "Central Station", "gates": ["Gate A1", "Gate A2"] },
+    { "name": "Tech Park", "gates": ["Gate B1", "Gate B2"] },
+    { "name": "Old Town", "gates": ["Gate C1", "Gate C2"] }
+  ],
+  "trains": [
+    {
+      "id": "T101",
+      "name": "Blue Line Express",
+      "route": ["Central Station", "Tech Park", "Old Town"],
+      "arrivalTime": "10:15 AM",
+      "departureTime": "10:00 AM",
+      "fare": 2.5
+    },
+    {
+      "id": "T202",
+      "name": "Green Commuter",
+      "route": ["Tech Park", "Central Station"],
+      "arrivalTime": "11:00 AM",
+      "departureTime": "10:45 AM",
+      "fare": 1.75
+    },
+     {
+      "id": "T103",
+      "name": "White Line Express",
+      "route": ["Central Station", "Old Town"],
+      "arrivalTime": "10:15 AM",
+      "departureTime": "10:00 AM",
+      "fare": 4.5
+    },
+    {
+      "id": "T204",
+      "name": "Yellow Commuter",
+      "route": ["Tech Park", "Central Station","Old Town"],
+      "arrivalTime": "11:00 AM",
+      "departureTime": "10:45 AM",
+      "fare": 3.75
+    }
+  ]
+}

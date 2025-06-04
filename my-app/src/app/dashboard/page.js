@@ -13,16 +13,16 @@ export default function Dashboard() {
   const [bookings, setBookings] = useState([])
   const [error, setError] = useState(null)
 
-  async function fetchTrains() {
-    try {
-      const data = await apiFetch('/trains')
-      setTrains(data)
-    } catch (e) {
-      setError(e.message)
-    }
+const fetchTrains = async () => {
+  try {
+    const data = await apiFetch('/trains')
+    setTrains(data)
+  } catch (e) {
+    setError(e.message)
   }
+}
 
-  async function fetchBookings() {
+  const fetchBookings=async() =>{
     try {
       const data = await apiFetch('/bookings')
       setBookings(data)
@@ -31,7 +31,7 @@ export default function Dashboard() {
     }
   }
 
-  async function searchRoutes(e) {
+  const searchRoutes=async(e)=> {
     e.preventDefault()
     setError(null)
     try {
@@ -45,7 +45,8 @@ export default function Dashboard() {
     }
   }
 
-  async function bookTicket(route) {
+  const bookTicket=async(route) =>{
+    const token = localStorage.getItem('token')
     if (!token) {
       alert('Login required')
       return
