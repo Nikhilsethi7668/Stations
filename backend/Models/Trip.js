@@ -9,4 +9,4 @@ const tripSchema = new mongoose.Schema({
   shape_id: String,
   peak_offpeak: Number,
 });
-module.exports = mongoose.model("Trip", tripSchema);
+module.exports = mongoose.models.Trip || mongoose.model("Trip", tripSchema);

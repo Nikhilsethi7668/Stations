@@ -1,25 +1,9 @@
 const mongoose = require("mongoose");
-const StopSchema = new mongoose.Schema({
-  stopId: {
-    type: String,
-    unique: true,
-    index: true,
-    required: true,
-  },
-  stopCode: {
-    typr: String,
-  },
-  stopName: {
-    type: String,
-    required: True,
-  },
-  stopLat: {
-    type: String,
-    required: True,
-  },
-  stopLon: {
-    type: String,
-    required: True,
-  },
+const stopSchema = new mongoose.Schema({
+  stop_id: { type: String, unique: true, index: true, required: true },
+  stop_code: { type: String },
+  stop_name: { type: String, required: true },
+  stop_lat: { type: Number, required: true },
+  stop_lon: { type: Number, required: true },
 });
-module.exports = mongoose.model("Stop", StopSchema);
+module.exports = mongoose.models.Stop || mongoose.model("Stop", stopSchema);

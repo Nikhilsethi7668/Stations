@@ -6,4 +6,4 @@ const routeSchema = new mongoose.Schema({
   route_color: { type: String },
   route_text_color: { type: String },
 });
-module.exports = mongoose.model("Route", routeSchema);
+module.exports = mongoose.models.Route || mongoose.model("Route", routeSchema);

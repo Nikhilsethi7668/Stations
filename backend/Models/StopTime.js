@@ -9,4 +9,5 @@ const stopTimeSchema = new mongoose.Schema({
   drop_off_type: { type: Number, default: 0 },
 });
 stopTimeSchema.index({ trip_id: 1, stop_sequence: 1 });
-module.exports = mongoose.model("StopTime", stopTimeSchema);
+module.exports =
+  mongoose.models.StopTime || mongoose.model("StopTime", stopTimeSchema);
