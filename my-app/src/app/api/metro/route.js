@@ -32,6 +32,7 @@ export async function GET(req) {
         fare: `$${train.fare.toFixed(2)}`,
         arrivalTime: train.arrivalTime,
         departureTime: train.departureTime,
+        route: train.route?.slice(sourceIndex, destinationIndex + 1),
         entryGatesSource: metroData.stations.find(station => station.name === source)?.gates || [],
         entryGatesDestination: metroData.stations.find(station => station.name === destination)?.gates || []
       };

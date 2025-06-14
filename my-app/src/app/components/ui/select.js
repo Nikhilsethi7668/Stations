@@ -4,9 +4,9 @@
 import { useState } from "react";
 
 // Main Select wrapper
-export function Select({ onValueChange, children }) {
+export function Select({ onValueChange,valueChange, children }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedLabel, setSelectedLabel] = useState("Select...");
+  const [selectedLabel, setSelectedLabel] = useState(valueChange||"Select...");
 
   // Enhance children with handler
   const enhancedChildren = children.map((child) => {
@@ -51,7 +51,7 @@ export function SelectTrigger({ children }) {
 }
 
 export function SelectValue({ placeholder }) {
-  return <span className="text-gray-400">{placeholder}</span>;
+  return <span className="text-gray-400 px-4 py-2">{placeholder}</span>;
 }
 
 export function SelectContent({ children }) {

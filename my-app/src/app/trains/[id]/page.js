@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, TrainFront, Clock, DollarSign, MapPin } from "lucide-react";
+import Head from "next/head";
+
 
 export default function TrainPage() {
   const { id } = useParams();
@@ -19,6 +21,32 @@ export default function TrainPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-100 p-6">
+   {train && (
+      <Head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "TrainTrip",
+              "trainNumber": train.id,
+              "name": train.name,
+              "departureStation": train.route[0],
+              "arrivalStation": train.route[train.route.length - 1],
+              "departureTime": train.departureTime,
+              "arrivalTime": train.arrivalTime,
+              "offers": {
+                "@type": "Offer",
+                "price": train.fare,
+                "priceCurrency": "USD"
+              }
+            })
+          }}
+        />
+      </Head>
+    )}
+
+
       <div className="max-w-4xl mx-auto">
         <div
           className="flex items-center gap-2 text-blue-600 font-medium mb-6 cursor-pointer hover:underline"
