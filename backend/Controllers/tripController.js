@@ -6,20 +6,27 @@ const CalendarDate = require("../Models/CalendarDate");
 exports.findTrips = async (req, res) => {
   try {
     const { from_stop_id, to_stop_id, date } = req.body;
-    console.log("Request received:", { from_stop_id, to_stop_id, date });
+    console.log("🚀 Request received:", { from_stop_id, to_stop_id, date });
 
+    const serviceDate =
+      typeof date === "number" ? date : parseInt(date.replace(/-/g, ""));
     const services = await CalendarDate.find({
-      date,
+      date: serviceDate.toString(),
       exception_type: 1,
     }).distinct("service_id");
-    console.log("Active service_ids:", services);
 
-    const paths = await findPaths(from_stop_id, to_stop_id, services);
-    console.log("Total paths found:", paths.length);
+    console.log("📆 Active service_ids:", services);
+
+    const paths = await findPaths(
+      from_stop_id.toString(),
+      to_stop_id.toString(),
+      services
+    );
+    console.log("🎯 Total paths found:", paths.length);
 
     res.json(paths);
   } catch (error) {
-    console.error("Error in findTrips controller:", error);
+    console.error("❌ Error in findTrips:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -28,17 +35,18 @@ async function findPaths(from_stop_id, to_stop_id, services) {
   const paths = [];
 
   const directTrips = await findDirectTrips(from_stop_id, to_stop_id, services);
-  console.log("Direct trips found:", directTrips.length);
+  console.log("🚂 Direct trips found:", directTrips.length);
   paths.push(...directTrips);
 
+  console.log("🔄 Finding one-transfer trips...");
   const oneTransferTrips = await findTripsWithOneTransfer(
     from_stop_id,
     to_stop_id,
     services
   );
-  console.log("One-transfer trips found:", oneTransferTrips.length);
-  paths.push(...oneTransferTrips);
+  console.log("✅ One-transfer trips found:", oneTransferTrips.length);
 
+  paths.push(...oneTransferTrips);
   return paths;
 }
 
@@ -86,109 +94,107 @@ async function findDirectTrips(from_stop_id, to_stop_id, services) {
 }
 
 async function findTripsWithOneTransfer(from_stop_id, to_stop_id, services) {
-  console.log("Finding one-transfer trips...");
+  const transferTrips = [];
 
-  const originLegs = await StopTime.aggregate([
-    { $match: { stop_id: from_stop_id } },
-    {
-      $lookup: {
-        from: "stoptimes",
-        let: { trip: "$trip_id", seq: "$stop_sequence" },
-        pipeline: [
-          { $match: { $expr: { $eq: ["$trip_id", "$$trip"] } } },
-          { $match: { $expr: { $gt: ["$stop_sequence", "$$seq"] } } },
-          {
-            $project: {
-              stop_id: 1,
-              stop_sequence: 1,
-              departure_time: 1,
-              arrival_time: 1,
-            },
+  // First: all trips FROM from_stop_id
+  const originStopTimes = await StopTime.find({ stop_id: from_stop_id }).lean();
+
+  for (const origin of originStopTimes) {
+    const firstTrip = await Trip.findOne({
+      trip_id: origin.trip_id,
+      service_id: { $in: services },
+    }).lean();
+
+    if (!firstTrip) continue;
+
+    const afterStops = await StopTime.find({
+      trip_id: origin.trip_id,
+      stop_sequence: { $gt: origin.stop_sequence },
+    }).lean();
+
+    for (const interStop of afterStops) {
+      const interStopId = interStop.stop_id;
+
+      // Now, second leg: to destination
+      const secondTripStopTimes = await StopTime.find({
+        stop_id: interStopId,
+      }).lean();
+
+      for (const secondStop of secondTripStopTimes) {
+        const destStop = await StopTime.findOne({
+          trip_id: secondStop.trip_id,
+          stop_id: to_stop_id,
+          stop_sequence: { $gt: secondStop.stop_sequence },
+        }).lean();
+
+        if (!destStop) continue;
+
+        const secondTrip = await Trip.findOne({
+          trip_id: secondStop.trip_id,
+          service_id: { $in: services },
+        }).lean();
+
+        if (!secondTrip) continue;
+
+        // Check time gap (at least 5 minutes)
+        const firstArrival = new Date(`2000-01-01T${interStop.arrival_time}`);
+        const secondDeparture = new Date(
+          `2000-01-01T${secondStop.departure_time}`
+        );
+        const diffMins = (secondDeparture - firstArrival) / 60000;
+
+        if (diffMins < 5 || diffMins > 90) continue;
+
+        const route1 = await Route.findOne({
+          route_id: firstTrip.route_id,
+        }).lean();
+        const route2 = await Route.findOne({
+          route_id: secondTrip.route_id,
+        }).lean();
+
+        const firstLegStops = await StopTime.find({
+          trip_id: origin.trip_id,
+          stop_sequence: {
+            $gte: origin.stop_sequence,
+            $lte: interStop.stop_sequence,
           },
-        ],
-        as: "nextStops",
-      },
-    },
-    { $unwind: "$nextStops" },
-    {
-      $project: {
-        trip_id: "$trip_id",
-        stop_id: "$nextStops.stop_id",
-        arrive: "$nextStops.arrival_time",
-        depart: "$nextStops.departure_time",
-      },
-    },
-  ]);
+        })
+          .sort({ stop_sequence: 1 })
+          .lean();
 
-  const destLegs = await StopTime.aggregate([
-    { $match: { stop_id: to_stop_id } },
-    {
-      $lookup: {
-        from: "stoptimes",
-        let: { trip: "$trip_id", seq: "$stop_sequence" },
-        pipeline: [
-          { $match: { $expr: { $eq: ["$trip_id", "$$trip"] } } },
-          { $match: { $expr: { $lt: ["$stop_sequence", "$$seq"] } } },
-          {
-            $project: {
-              stop_id: 1,
-              stop_sequence: 1,
-              departure_time: 1,
-              arrival_time: 1,
-            },
+        const secondLegStops = await StopTime.find({
+          trip_id: secondStop.trip_id,
+          stop_sequence: {
+            $gte: secondStop.stop_sequence,
+            $lte: destStop.stop_sequence,
           },
-        ],
-        as: "prevStops",
-      },
-    },
-    { $unwind: "$prevStops" },
-    {
-      $project: {
-        trip_id: "$trip_id",
-        stop_id: "$prevStops.stop_id",
-        arrive: "$prevStops.arrival_time",
-        depart: "$prevStops.departure_time",
-      },
-    },
-  ]);
+        })
+          .sort({ stop_sequence: 1 })
+          .lean();
 
-  const legsByStop = new Map();
-  for (const leg of destLegs) {
-    if (!legsByStop.has(leg.stop_id)) legsByStop.set(leg.stop_id, []);
-    legsByStop.get(leg.stop_id).push(leg);
-  }
-
-  const transfers = [];
-  for (const leg1 of originLegs) {
-    const candidates = legsByStop.get(leg1.stop_id);
-    if (!candidates) continue;
-
-    for (const leg2 of candidates) {
-      const time1 = new Date(`2000-01-01T${leg1.arrive}`);
-      const time2 = new Date(`2000-01-01T${leg2.depart}`);
-      const transferTime = (time2 - time1) / (1000 * 60);
-
-      if (transferTime >= 5) {
-        transfers.push({
+        transferTrips.push({
           type: "transfer",
-          transfer_stop: leg1.stop_id,
+          transfer_stop: interStopId,
+          total_departure_time: origin.departure_time,
+          total_arrival_time: destStop.arrival_time,
           first_leg: {
-            trip: leg1.trip_id,
-            depart: leg1.depart,
-            arrive: leg1.arrive,
+            trip_id: origin.trip_id,
+            route_name: route1?.route_long_name || "",
+            departure_time: origin.departure_time,
+            arrival_time: interStop.arrival_time,
+            stops: firstLegStops,
           },
           second_leg: {
-            trip: leg2.trip_id,
-            depart: leg2.depart,
-            arrive: leg2.arrive,
+            trip_id: secondStop.trip_id,
+            route_name: route2?.route_long_name || "",
+            departure_time: secondStop.departure_time,
+            arrival_time: destStop.arrival_time,
+            stops: secondLegStops,
           },
-          total_departure_time: leg1.depart,
-          total_arrival_time: leg2.arrive,
         });
       }
     }
   }
 
-  console.log("Total transfer trips:", transfers.length);
-  return transfers;
+  return transferTrips;
 }
